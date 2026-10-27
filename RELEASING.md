@@ -17,10 +17,12 @@ signed build set `SWELL_SIGN_IDENTITY` ("Developer ID Application: ...") and
 `SWELL_NOTARY_PROFILE` (a `notarytool` keychain profile) first.
 
 On Linux the same script makes `obj-swell/dist/release/Swell-<version>-<arch>.tar.xz` (and a
-`.sha256`) with `MOZCONFIG` defaulting to `swell/mozconfig.linux`. Build on the oldest
-distribution you mean to support, because the binaries need at least its glibc (Ubuntu 22.04 is
-a good floor), after `./mach bootstrap`. The tarball holds the application, `install.sh` (adds
-Swell to the user's menu, `--uninstall` removes it) and the icons. There is no Flatpak yet.
+`.sha256`) with `MOZCONFIG` defaulting to `swell/mozconfig.linux`, after `./mach bootstrap`.
+The build then compiles against the Debian sysroot that bootstrap downloads, not the libraries
+of the machine, so any distribution can make it: the binaries need glibc 2.17, like Firefox's
+(`libonnxruntime.so`, loaded only for on-device machine learning, needs 2.34). The tarball holds
+the application, `install.sh` (adds Swell to the user's menu, `--uninstall` removes it) and the
+icons. There is no Flatpak yet.
 
 Check the build before publishing: copy the app to Applications, open it (right-click, Open),
 and run through the manual checks in `docs/` (camera, downloads, print, restart).

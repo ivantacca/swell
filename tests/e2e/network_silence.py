@@ -13,6 +13,7 @@ connectivity checks, update and settings services, and so on. --report prints
 the hosts and the log lines that name them without failing. The automatic update
 check (api.github.com, about 30 s after start) is allowed, and must happen, in a
 run of at least 40 s; --no-autocheck turns it off and then allows no GitHub at all.
+SWELL_APP names another binary to run, for example the staged package.
 """
 
 import argparse
@@ -26,7 +27,12 @@ import time
 
 from marionette_driver.marionette import Marionette
 
-APP = "obj-swell/dist/Swell.app/Contents/MacOS/swell"
+DEFAULT_APP = (
+    "obj-swell/dist/Swell.app/Contents/MacOS/swell"
+    if sys.platform == "darwin"
+    else "obj-swell/dist/bin/swell"
+)
+APP = os.environ.get("SWELL_APP", DEFAULT_APP)
 
 # Remote Settings is allowed on purpose (a decision of the M2 milestone): read-only
 # downloads of the add-on blocklist and certificate revocation data, from the

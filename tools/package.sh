@@ -15,8 +15,9 @@
 #                           image is notarized and stapled.
 #
 # On Linux it makes obj-swell/dist/release/Swell-<version>-<arch>.tar.xz instead (the
-# application, an install.sh that adds it to the user's menu, and the icons). Build on the
-# oldest distribution you mean to support: the binaries need at least its glibc. No Flatpak yet.
+# application, an install.sh that adds it to the user's menu, and the icons). After
+# ./mach bootstrap the build uses Mozilla's Debian sysroot, so the binaries need glibc 2.17
+# whatever distribution builds them (see RELEASING.md). No Flatpak yet.
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)

@@ -36,9 +36,11 @@ export function compareVersions(a, b) {
 
 const ASSET_EXTENSIONS = { macosx: "dmg", linux: "tar.xz" };
 
+// Gecko says "x86-64" where `uname -m`, which names the files, says "x86_64".
 const normalizeArch = arch =>
-  ({ aarch64: "arm64", amd64: "x86_64" })[String(arch).toLowerCase()] ??
-  String(arch).toLowerCase();
+  ({ aarch64: "arm64", amd64: "x86_64", "x86-64": "x86_64" })[
+    String(arch).toLowerCase()
+  ] ?? String(arch).toLowerCase();
 
 /**
  * Finds the file of a release made for this platform, named

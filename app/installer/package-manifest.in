@@ -4,9 +4,9 @@
 
 ; Package file for the Swell build, cut down from browser/installer/package-manifest.in.
 ; It lists what is copied from dist/bin into the staging directory; the format is the
-; one described there. Left out on purpose: the updater, the crash reporter, the
-; maintenance service, the ping sender, native messaging proxy, the default browser
-; agent and everything Windows-only, none of which Swell builds or uses.
+; one described there. Left out on purpose: the updater and its channel-prefs.js, the
+; crash reporter, the maintenance service, the ping sender, native messaging proxy, the
+; default browser agent and everything Windows-only, none of which Swell builds or uses.
 ;
 ; @BINPATH@ is Contents/MacOS/ on macOS, @RESPATH@ is Contents/Resources/ there; on
 ; other platforms both are the application directory.
@@ -55,10 +55,20 @@
 #endif
 #ifdef MOZ_GTK
 ; Launched on Linux to check the graphics capabilities, apart so that it may crash.
-@BINPATH@/gfxtest
+@BINPATH@/glxtest
 @BINPATH@/@DLL_PREFIX@mozgtk@DLL_SUFFIX@
 #ifdef MOZ_WAYLAND
 @BINPATH@/@DLL_PREFIX@mozwayland@DLL_SUFFIX@
+#endif
+; The same for hardware video decoding (VA-API, Vulkan Video and, on ARM, V4L2).
+#ifdef MOZ_ENABLE_V4L2
+@BINPATH@/v4l2test
+#endif
+#ifdef MOZ_ENABLE_VAAPI
+@BINPATH@/vaapitest
+#endif
+#ifdef MOZ_ENABLE_VULKAN_VIDEO
+@BINPATH@/vulkantest
 #endif
 #endif
 
@@ -104,10 +114,6 @@
 @RESPATH@/defaults/autoconfig/prefcalls.js
 ; Remote Settings JSON dumps
 @RESPATH@/app/defaults/settings
-
-#ifndef XP_MACOSX
-@RESPATH@/defaults/pref/channel-prefs.js
-#endif
 
 ; Layout engine resources
 @RESPATH@/res/EditorOverride.css

@@ -65,8 +65,11 @@ add_task(async function test_other_platforms_draw_window_buttons() {
     /#window-controls \{[^}]*-moz-window-dragging: no-drag/s.test(css),
     "the buttons are not part of the drag region"
   );
+  // The strip is fixed over the top of #app, whose padding keeps its content below.
+  const app = document.getElementById("app");
   Assert.greaterOrEqual(
-    document.getElementById("app").getBoundingClientRect().top,
+    app.getBoundingClientRect().top +
+      parseFloat(getComputedStyle(app).paddingTop),
     document.getElementById("titlebar").getBoundingClientRect().height - 1,
     "the app starts under the strip"
   );

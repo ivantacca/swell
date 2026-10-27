@@ -4,7 +4,7 @@ Type=Application
 Name=Swell
 GenericName=Web Browser
 Comment=Browse with fully isolated spaces in one window
-Exec=@EXEC@ %u
+Exec="@EXEC@" %u
 Icon=swell
 Terminal=false
 Categories=Network;WebBrowser;
@@ -15,4 +15,4 @@ Actions=new-window;
 
 [Desktop Action new-window]
 Name=New Window
-Exec=@EXEC@ --new-window
+Exec="@EXEC@" --new-window

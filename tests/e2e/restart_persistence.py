@@ -26,7 +26,12 @@ import time
 
 from marionette_driver.marionette import Marionette
 
-APP = os.environ.get("SWELL_APP", "obj-swell/dist/Swell.app/Contents/MacOS/swell")
+DEFAULT_APP = (
+    "obj-swell/dist/Swell.app/Contents/MacOS/swell"
+    if sys.platform == "darwin"
+    else "obj-swell/dist/bin/swell"
+)
+APP = os.environ.get("SWELL_APP", DEFAULT_APP)
 
 BUILD = r"""
 const done = arguments[arguments.length - 1];

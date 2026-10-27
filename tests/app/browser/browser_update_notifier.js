@@ -86,7 +86,8 @@ add_task(async function test_the_badge_opens_the_file_for_this_system() {
     "resource://gre/modules/AppConstants.sys.mjs"
   );
   const extension = AppConstants.platform == "macosx" ? "dmg" : "tar.xz";
-  const arch = Services.sysinfo.getProperty("arch");
+  // tools/package.sh names the file after `uname -m`, which says x86_64 for Gecko's x86-64.
+  const arch = Services.sysinfo.getProperty("arch").replace("x86-64", "x86_64");
   const file = `https://example.com/Swell-99.0.0-${arch}.${extension}`;
   const { instance, opened } = await notifier([
     {

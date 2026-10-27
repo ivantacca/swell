@@ -5,3 +5,6 @@
 include("/toolkit/toolkit.mozbuild")
 
 DIRS += ["/%s" % CONFIG["MOZ_BRANDING_DIRECTORY"]]
+
+# Twemoji Mozilla, the emoji font Firefox ships on Linux and Windows (packaged as fonts/*).
+DIRS += ["/browser/fonts"]

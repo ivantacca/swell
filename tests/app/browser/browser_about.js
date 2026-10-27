@@ -117,6 +117,11 @@ add_task(function test_the_file_for_this_system_is_picked() {
     url("Swell-0.52.0-x86_64.tar.xz")
   );
   Assert.equal(
+    pickAsset(assets, "linux", "x86-64"),
+    url("Swell-0.52.0-x86_64.tar.xz"),
+    "Gecko's x86-64 is x86_64"
+  );
+  Assert.equal(
     pickAsset(assets, "linux", "aarch64"),
     url("Swell-0.52.0-aarch64.tar.xz")
   );
