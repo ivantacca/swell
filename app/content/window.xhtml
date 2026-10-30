@@ -178,6 +178,12 @@
         <button id="window-close" class="window-control" title="Close"></button>
       </div>
     </div>
+    <keyset
+      xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      id="main-keyset"
+    >
+      <key id="key_quit" key="Q" modifiers="accel" />
+    </keyset>
     <menubar
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       id="main-menubar"
@@ -197,7 +203,12 @@
           <menuitem id="menu_mac_hide_others" label="Hide Others" />
           <menuitem id="menu_mac_show_all" label="Show All" />
           <menuseparator id="menu_FileQuitSeparator" />
-          <menuitem id="menu_FileQuitItem" label="Quit Swell" />
+          <menuitem
+            id="menu_FileQuitItem"
+            label="Quit Swell"
+            key="key_quit"
+            data-action="quit"
+          />
         </menupopup>
       </menu>
       <menu id="edit-menu" label="Edit">

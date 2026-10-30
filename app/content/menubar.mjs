@@ -33,6 +33,7 @@ export class MenuBar {
       find: () => app.bridge.openFind(),
       "find-next": () => app.bridge.findAgain(false),
       "find-previous": () => app.bridge.findAgain(true),
+      quit: () => Services.startup.quit(Services.startup.eAttemptQuit),
       minimize: () => win.minimize(),
       "zoom-window": () =>
         win.windowState == win.STATE_MAXIMIZED ? win.restore() : win.maximize(),
