@@ -31,6 +31,7 @@ const COMMANDS = [
   "updateSpace",
   "moveSpace",
   "setSpaceTint",
+  "setPinnedCollapsed",
   "deleteSpace",
   "openWindow",
   "closeWindow",

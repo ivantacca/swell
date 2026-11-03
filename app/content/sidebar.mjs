@@ -78,6 +78,12 @@ export class Sidebar {
     doc
       .getElementById("space-add")
       .addEventListener("click", () => app.spaceEditor.create());
+    doc.getElementById("pinned-header").addEventListener("click", () => {
+      const space = app.space;
+      if (space) {
+        app.setPinnedCollapsed(space.id, !space.pinnedCollapsed);
+      }
+    });
     for (const id of ["pinned", "today", "favorites"]) {
       this.#installDropZone(doc.getElementById(id));
     }
@@ -119,6 +125,7 @@ export class Sidebar {
     if (!space) {
       return;
     }
+    this.#renderPinnedHeader(space);
     this.#renderTree("pinned", space.pinnedRoot, true);
     this.#renderTree("today", space.todayRoot);
     this.#renderFavorites(space.favoritesRoot);
@@ -195,6 +202,21 @@ export class Sidebar {
       this.#setSelection([]);
       this.#activate(id);
     }
+  }
+
+  // The name of the space above its pinned list; clicking it folds the list.
+  #renderPinnedHeader(space) {
+    const doc = this.#doc;
+    const header = doc.getElementById("pinned-header");
+    header.classList.toggle("collapsed", space.pinnedCollapsed);
+    header.setAttribute("aria-expanded", String(!space.pinnedCollapsed));
+    header.title = space.pinnedCollapsed
+      ? "Show pinned tabs"
+      : "Hide pinned tabs";
+    doc.getElementById("pinned-icon").textContent =
+      space.icon.glyph ?? space.title.charAt(0).toUpperCase();
+    doc.getElementById("pinned-name").textContent = space.title;
+    doc.getElementById("pinned").hidden = space.pinnedCollapsed;
   }
 
   #renderTree(containerId, root, saved = false) {

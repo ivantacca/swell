@@ -774,6 +774,78 @@ kbd {
   padding-top: var(--space-xsmall);
 }
 
+/* The space's name over its pinned list, like Arc, laid out like a row: the
+   icon of the space, which the chevron replaces while the pointer is over the
+   header, or while the list is folded away. */
+.pinned-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  text-align: left;
+}
+
+.pinned-header:hover {
+  background: var(--row-hover);
+}
+
+/* The same 4px as between the rows of a tree. */
+.pinned-header,
+#today-section .new-tab {
+  margin-bottom: 4px;
+}
+
+.pinned-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  margin-inline-start: 6px;
+  width: 14px;
+  height: 14px;
+  font-size: 11px;
+}
+
+.pinned-header:hover .pinned-icon,
+.pinned-header.collapsed .pinned-icon {
+  font-size: 0;
+}
+
+.pinned-header:hover .pinned-icon::before,
+.pinned-header.collapsed .pinned-icon::before {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  mask: url("chrome://swell/content/icons/nav-arrow-right.svg") center / contain no-repeat;
+  transition: transform 0.15s;
+}
+
+/* Pointing down while the list is shown, to the side while it is folded. */
+.pinned-header:not(.collapsed):hover .pinned-icon::before {
+  transform: rotate(90deg);
+}
+
+.pinned-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree[hidden] {
+  display: none;
+}
+
 .tree {
   min-height: var(--size-item-medium);
   padding-bottom: 6px;

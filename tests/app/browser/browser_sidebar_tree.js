@@ -21,6 +21,36 @@ add_task(async function test_the_tree_renders_and_folders_collapse() {
   await rendered(() => rowTitles("pinned").length == 3, "the folder expands");
 });
 
+add_task(async function test_the_space_name_folds_the_pinned_list_away() {
+  const { core, app } = await swellApp();
+  const space = await freshSpace(app, "Fold");
+  await savedTab(core, space, space.pinnedRoot, "https://a.test/", "Alpha");
+  await rendered(() => rowTitles("pinned").length == 1, "a pinned row");
+
+  const header = document.getElementById("pinned-header");
+  Assert.equal(
+    document.getElementById("pinned-name").textContent,
+    "Fold",
+    "the space's name"
+  );
+  Assert.ok(!document.getElementById("pinned").hidden, "the list is shown");
+
+  header.click();
+  await rendered(
+    () => document.getElementById("pinned").hidden,
+    "the list is folded away"
+  );
+  Assert.ok(app.space.pinnedCollapsed, "the core has it");
+  Assert.equal(header.getAttribute("aria-expanded"), "false");
+
+  header.click();
+  await rendered(
+    () => !document.getElementById("pinned").hidden,
+    "the list is shown again"
+  );
+  Assert.ok(!app.space.pinnedCollapsed);
+});
+
 add_task(
   async function test_clicking_a_saved_tab_opens_it_in_the_spaces_container() {
     const { core, bridge, app } = await swellApp();

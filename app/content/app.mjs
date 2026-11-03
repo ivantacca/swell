@@ -524,6 +524,10 @@ export class App {
     return this.run(() => this.core.setCollapsed(id, collapsed));
   }
 
+  setPinnedCollapsed(spaceId, collapsed) {
+    return this.run(() => this.core.setPinnedCollapsed(spaceId, collapsed));
+  }
+
   // Moves a tab into Pinned, at the end.
   pin(id) {
     const space = this.space;
