@@ -1360,18 +1360,11 @@ dialog .buttons {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 0 var(--space-medium);
   -moz-window-dragging: no-drag;
 }
 
 #downloads-panel[hidden] {
   display: none;
-}
-
-#downloads-title {
-  margin: var(--space-medium) var(--space-small);
-  font-size: 15px;
-  font-weight: 600;
 }
 
 #downloads-list {
@@ -1388,55 +1381,215 @@ dialog .buttons {
   animation: slide-in-prev 260ms ease;
 }
 
+#downloads-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: var(--space-medium) var(--space-medium) var(--space-small);
+}
+
+#downloads-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+#downloads-clear {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#downloads-clear:hover {
+  color: var(--accent);
+}
+
+.downloads-day {
+  margin: var(--space-medium) var(--space-medium) var(--space-xsmall);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .download-row {
+  position: relative;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 36px 1fr auto;
+  grid-template-areas:
+    "icon name actions"
+    "icon state actions";
   align-items: center;
-  gap: 2px var(--space-small);
+  column-gap: var(--space-medium);
+  row-gap: 1px;
   padding: var(--space-small) var(--space-medium);
   border-radius: 12px;
 }
 
-.download-row:hover {
+.download-row:hover,
+.download-row:focus-visible {
   background: var(--row-hover);
+}
+
+.download-row[data-state="done"] {
+  cursor: pointer;
+}
+
+.download-icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--row-hover);
+  color: var(--muted);
+}
+
+.download-icon::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  background-color: currentColor;
+  mask: url("chrome://swell/content/icons/page.svg") center / contain no-repeat;
+}
+
+.download-row[data-state="running"] .download-icon {
+  color: var(--accent);
 }
 
 .download-name {
-  grid-column: 1 / -1;
+  grid-area: name;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 
 .download-state {
-  grid-column: 1;
+  grid-area: state;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
   font-size: 12px;
+}
+
+.download-row[data-state="failed"] .download-state {
+  color: #d9534f;
 }
 
 .download-actions {
-  grid-column: 2;
-  grid-row: 2;
+  grid-area: actions;
   display: flex;
-  gap: var(--space-xsmall);
+  gap: 2px;
+  opacity: 0;
 }
 
-.download-actions button {
+.download-row:hover .download-actions,
+.download-row:focus-within .download-actions,
+.download-row[data-state="running"] .download-actions {
+  opacity: 1;
+}
+
+.download-button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   border: none;
-  background: var(--row-hover);
-  border-radius: 6px;
-  padding: var(--space-xsmall) var(--space-small);
-  font-size: 12px;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
 }
 
-.download-actions button:hover {
+.download-button::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  mask: var(--icon) center / contain no-repeat;
+}
+
+.download-button:hover {
+  background: var(--row-hover);
+  color: inherit;
+}
+
+.download-button.show {
+  --icon: url("chrome://swell/content/icons/folder.svg");
+}
+
+.download-button.pause {
+  --icon: url("chrome://swell/content/icons/pause.svg");
+}
+
+.download-button.resume {
+  --icon: url("chrome://swell/content/icons/play.svg");
+}
+
+.download-button.retry {
+  --icon: url("chrome://swell/content/icons/refresh.svg");
+}
+
+.download-button.cancel,
+.download-button.remove {
+  --icon: url("chrome://swell/content/icons/xmark.svg");
+}
+
+.download-progress {
+  position: absolute;
+  left: calc(var(--space-medium) + 36px + var(--space-medium));
+  right: var(--space-medium);
+  bottom: 3px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--row-hover);
+  overflow: hidden;
+}
+
+.download-progress-fill {
+  height: 100%;
   background: var(--accent);
-  color: white;
+  transition: width 200ms ease;
+}
+
+.download-progress[data-indeterminate] .download-progress-fill {
+  width: 30%;
+  animation: download-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes download-indeterminate {
+  from {
+    margin-left: -30%;
+  }
+  to {
+    margin-left: 100%;
+  }
 }
 
 .downloads-empty {
-  margin: var(--space-medium);
+  display: grid;
+  place-items: center;
+  gap: var(--space-small);
+  margin: var(--space-large) var(--space-medium);
   color: var(--muted);
+  text-align: center;
+}
+
+.downloads-empty::before {
+  content: "";
+  width: 28px;
+  height: 28px;
+  background-color: currentColor;
+  mask: url("chrome://swell/content/icons/download.svg") center / contain no-repeat;
 }
 
 #about-dialog {

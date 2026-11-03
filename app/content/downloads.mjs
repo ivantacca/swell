@@ -11,18 +11,68 @@ function reveal(download) {
   file.reveal();
 }
 
-function stateOf(download) {
-  if (download.succeeded) {
-    return "Done";
+const sizeFormat = bytes => {
+  if (!(bytes >= 0)) {
+    return "";
   }
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0;
+  while (bytes >= 1000 && i < units.length - 1) {
+    bytes /= 1000;
+    i++;
+  }
+  return `${bytes.toFixed(i && bytes < 10 ? 1 : 0)} ${units[i]}`;
+};
+
+const hostOf = download => {
+  try {
+    return new URL(download.source.url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+};
+
+const ago = date => {
+  const seconds = Math.round((Date.now() - date) / 1000);
+  if (seconds < 60) {
+    return "just now";
+  }
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes} min ago`;
+  }
+  const hours = Math.floor(minutes / 60);
+  return hours < 24 ? `${hours} h ago` : `${Math.floor(hours / 24)} d ago`;
+};
+
+/** The state of a download as a short phrase for its subline. */
+function stateOf(download) {
   if (download.error) {
     return "Failed";
   }
   if (download.canceled) {
-    return "Canceled";
+    return download.hasPartialData ? "Paused" : "Canceled";
   }
-  return download.progress ? `${download.progress}%` : "Starting";
+  if (download.succeeded) {
+    return "";
+  }
+  const total = download.hasProgress ? download.totalBytes : 0;
+  return total
+    ? `${sizeFormat(download.currentBytes)} of ${sizeFormat(total)}`
+    : download.currentBytes
+      ? sizeFormat(download.currentBytes)
+      : "Starting";
 }
+
+const dayOf = download => {
+  const start = new Date(download.startTime);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (start >= today) {
+    return "Today";
+  }
+  return start >= today - 86400000 ? "Yesterday" : "Earlier";
+};
 
 /**
  * Tells when a download of the active space starts and finishes, and lists
@@ -36,6 +86,7 @@ export class DownloadsPanel {
   #panel;
   #sidebar;
   #rows;
+  #clear;
   #toasts = new WeakMap();
 
   constructor(app) {
@@ -44,6 +95,14 @@ export class DownloadsPanel {
     this.#panel = doc.getElementById("downloads-panel");
     this.#sidebar = doc.getElementById("sidebar");
     this.#rows = doc.getElementById("downloads-list");
+    this.#clear = doc.getElementById("downloads-clear");
+    this.#clear.addEventListener("click", async () => {
+      for (const download of await this.forActiveSpace()) {
+        if (download.stopped && !download.hasPartialData) {
+          this.#list.remove(download);
+        }
+      }
+    });
   }
 
   /** Whether the list is showing in the sidebar. */
@@ -122,39 +181,138 @@ export class DownloadsPanel {
   async #refresh() {
     const doc = this.#app.document;
     const downloads = await this.forActiveSpace();
+    this.#clear.hidden = !downloads.some(d => d.stopped);
     if (!downloads.length) {
-      const empty = doc.createElement("p");
+      const empty = doc.createElement("div");
       empty.className = "downloads-empty";
-      empty.textContent = "No downloads in this space";
+      const text = doc.createElement("p");
+      text.textContent = "No downloads in this space";
+      empty.append(text);
       this.#rows.replaceChildren(empty);
       return;
     }
-    this.#rows.replaceChildren(
-      ...downloads.map(download => {
-        const row = doc.createElement("div");
-        row.className = "download-row";
-        const label = doc.createElement("span");
-        label.className = "download-name";
-        label.textContent = fileName(download);
-        const state = doc.createElement("span");
-        state.className = "download-state";
-        state.textContent = stateOf(download);
-        const actions = doc.createElement("div");
-        actions.className = "download-actions";
-        if (download.succeeded) {
-          const show = doc.createElement("button");
-          show.textContent = "Show";
-          show.title = "Show in folder";
-          show.addEventListener("click", () => reveal(download));
-          actions.append(show);
+    const nodes = [];
+    let day = null;
+    for (const download of downloads) {
+      if (dayOf(download) != day) {
+        day = dayOf(download);
+        const heading = doc.createElement("h3");
+        heading.className = "downloads-day";
+        heading.textContent = day;
+        nodes.push(heading);
+      }
+      nodes.push(this.#row(download));
+    }
+    this.#rows.replaceChildren(...nodes);
+  }
+
+  #button(download, className, title, run) {
+    const button = this.#app.document.createElement("button");
+    button.className = `download-button ${className}`;
+    button.title = title;
+    button.setAttribute("aria-label", title);
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      run();
+    });
+    return button;
+  }
+
+  #row(download) {
+    const doc = this.#app.document;
+    const running = !download.stopped;
+    const row = doc.createElement("div");
+    row.className = "download-row";
+    row.dataset.state = download.succeeded
+      ? "done"
+      : download.error
+        ? "failed"
+        : running
+          ? "running"
+          : "stopped";
+
+    const icon = doc.createElement("span");
+    icon.className = "download-icon";
+
+    const name = doc.createElement("span");
+    name.className = "download-name";
+    name.textContent = fileName(download);
+    name.title = fileName(download);
+
+    const state = doc.createElement("span");
+    state.className = "download-state";
+    const parts = [];
+    if (download.succeeded) {
+      parts.push(sizeFormat(download.target.size));
+    } else {
+      parts.push(stateOf(download));
+    }
+    parts.push(hostOf(download));
+    if (download.stopped && download.startTime) {
+      parts.push(ago(new Date(download.startTime)));
+    }
+    state.textContent = parts.filter(Boolean).join(" · ");
+
+    const actions = doc.createElement("div");
+    actions.className = "download-actions";
+    if (download.succeeded) {
+      actions.append(
+        this.#button(download, "show", "Show in folder", () => reveal(download))
+      );
+    } else if (running) {
+      if (download.hasPartialData || download.hasProgress) {
+        actions.append(
+          this.#button(download, "pause", "Pause", () => download.cancel())
+        );
+      }
+      actions.append(
+        this.#button(download, "cancel", "Cancel", async () => {
+          await download.cancel();
+          await download.removePartialData();
+          this.#list.remove(download);
+        })
+      );
+    } else {
+      actions.append(
+        this.#button(
+          download,
+          download.hasPartialData ? "resume" : "retry",
+          download.hasPartialData ? "Resume" : "Retry",
+          () => download.start().catch(() => {})
+        )
+      );
+    }
+    if (!running) {
+      actions.append(
+        this.#button(download, "remove", "Remove from list", () =>
+          this.#list.remove(download)
+        )
+      );
+    }
+
+    row.append(icon, name, state, actions);
+    if (running) {
+      const bar = doc.createElement("div");
+      bar.className = "download-progress";
+      const fill = doc.createElement("div");
+      fill.className = "download-progress-fill";
+      if (download.hasProgress) {
+        fill.style.width = `${download.progress}%`;
+      } else {
+        bar.dataset.indeterminate = "";
+      }
+      bar.append(fill);
+      row.append(bar);
+    }
+    if (download.succeeded) {
+      row.tabIndex = 0;
+      row.addEventListener("click", () => download.launch().catch(() => {}));
+      row.addEventListener("keydown", event => {
+        if (event.key == "Enter") {
+          download.launch().catch(() => {});
         }
-        const remove = doc.createElement("button");
-        remove.textContent = "Remove";
-        remove.addEventListener("click", () => this.#list.remove(download));
-        actions.append(remove);
-        row.append(label, state, actions);
-        return row;
-      })
-    );
+      });
+    }
+    return row;
   }
 }

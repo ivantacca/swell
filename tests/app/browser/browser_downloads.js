@@ -69,6 +69,16 @@ add_task(async function test_an_attachment_is_saved_without_asking() {
     ["swell-test.bin"],
     "the panel lists this space's download"
   );
+  const row = panel.querySelector(".download-row");
+  Assert.equal(row.dataset.state, "done", "the row is finished");
+  Assert.ok(
+    row.querySelector(".download-state").textContent.includes("19 B"),
+    "the row shows the size"
+  );
+  Assert.ok(
+    row.querySelector(".download-button.show"),
+    "and a show in folder action"
+  );
   Assert.equal(
     document.getElementById("lists").getBoundingClientRect().height,
     0,
