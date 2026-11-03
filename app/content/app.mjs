@@ -551,10 +551,17 @@ export class App {
     return this.run(() => this.core.unpinNode(id, this.activeSpaceId));
   }
 
-  async createSpace(title, emoji) {
-    const icon = emoji
-      ? new this.Icon.Emoji({ glyph: emoji })
-      : new this.Icon.Symbol({ name: "circle" });
+  // The icon the picker chose: {glyph} for an emoji, {symbol} for one of the
+  // symbols, nothing for the first letter of the name (stored as "circle").
+  #iconOf({ glyph, symbol } = {}) {
+    if (glyph) {
+      return new this.Icon.Emoji({ glyph });
+    }
+    return new this.Icon.Symbol({ name: symbol || "circle" });
+  }
+
+  async createSpace(title, choice) {
+    const icon = this.#iconOf(choice);
     const id = await this.run(() =>
       this.core.createSpace(title || "New space", icon)
     );
@@ -563,10 +570,8 @@ export class App {
     }
   }
 
-  async updateSpace(id, title, emoji) {
-    const icon = emoji
-      ? new this.Icon.Emoji({ glyph: emoji })
-      : new this.Icon.Symbol({ name: "circle" });
+  async updateSpace(id, title, choice) {
+    const icon = this.#iconOf(choice);
     await this.run(() => this.core.updateSpace(id, title, icon));
   }
 

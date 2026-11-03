@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { showSpaceIcon } from "chrome://swell/content/symbols.mjs";
+
 const DRAG_TYPE = "application/x-swell-node";
 
 function hostOf(url) {
@@ -213,8 +215,7 @@ export class Sidebar {
     header.title = space.pinnedCollapsed
       ? "Show pinned tabs"
       : "Hide pinned tabs";
-    doc.getElementById("pinned-icon").textContent =
-      space.icon.glyph ?? space.title.charAt(0).toUpperCase();
+    showSpaceIcon(doc.getElementById("pinned-icon"), space);
     doc.getElementById("pinned-name").textContent = space.title;
     doc.getElementById("pinned").hidden = space.pinnedCollapsed;
   }
@@ -384,9 +385,7 @@ export class Sidebar {
       button.title = space.title;
       button.dataset.id = space.id;
       button.draggable = true;
-      button.textContent =
-        space.icon.glyph ?? space.title.charAt(0).toUpperCase();
-      button.classList.toggle("has-emoji", !!space.icon.glyph);
+      showSpaceIcon(button, space);
       button.addEventListener("click", () => app.switchSpace(space.id));
       button.addEventListener("contextmenu", event => {
         event.preventDefault();

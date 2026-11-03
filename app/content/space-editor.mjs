@@ -2,6 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import {
+  SYMBOL_CATEGORIES,
+  hasSymbol,
+  symbolSVG,
+} from "chrome://swell/content/symbols.mjs";
+
 // The skin tone modifiers of Unicode, light to dark.
 const SKIN_TONES = [
   "\u{1F3FB}",
@@ -11,11 +17,12 @@ const SKIN_TONES = [
   "\u{1F3FF}",
 ];
 
-const NO_EMOJI_LABEL = "Choose an emoji";
+const NO_EMOJI_LABEL = "Choose an icon";
 
 /**
- * The dialog that makes a space or changes one (name and emoji, with a picker
- * for the emoji), and the one that asks before a space is deleted.
+ * The dialog that makes a space or changes one (name and icon, with a picker
+ * for an emoji or one of the symbols), and the one that asks before a space is
+ * deleted.
  */
 export class SpaceEditor {
   #app;
@@ -31,9 +38,13 @@ export class SpaceEditor {
   #grid;
   #editing = null;
   #glyph = "";
+  #symbol = "";
+  #mode = "emoji";
+  #modes;
   #emojiLoaded = null;
   #categories = [];
   #category = null;
+  #symbolCategory = SYMBOL_CATEGORIES[0].name;
   #tone = 0;
   #tones;
 
@@ -50,6 +61,7 @@ export class SpaceEditor {
     this.#tabs = doc.getElementById("emoji-tabs");
     this.#grid = doc.getElementById("emoji-grid");
     this.#tones = doc.getElementById("emoji-tones");
+    this.#modes = [...doc.querySelectorAll("#picker-mode button")];
     this.#tone = Number(this.#storedTone());
 
     doc
@@ -62,8 +74,11 @@ export class SpaceEditor {
     this.#emojiButton.addEventListener("click", () => this.#togglePicker());
     this.#title.addEventListener("input", () => this.#showIcon());
     doc.getElementById("emoji-clear").addEventListener("click", () => {
-      this.#choose("");
+      this.#choose({});
     });
+    for (const button of this.#modes) {
+      button.addEventListener("click", () => this.#setMode(button.dataset.mode));
+    }
     this.#search.addEventListener("input", () => this.#renderGrid());
     // Escape closes the picker before it closes the dialog.
     this.#dialog.addEventListener(
@@ -94,7 +109,11 @@ export class SpaceEditor {
     this.#heading.textContent = space ? "Edit space" : "New space";
     this.#submit.textContent = space ? "Save" : "Create space";
     this.#title.value = space?.title ?? "";
-    this.#choose(space?.icon.glyph ?? "");
+    const { glyph, name } = space?.icon ?? {};
+    this.#choose(
+      glyph ? { glyph } : hasSymbol(name) ? { symbol: name } : {}
+    );
+    this.#setMode(this.#symbol ? "symbols" : "emoji", false);
     this.#search.value = "";
     this.#dialog.showModal();
     this.#title.focus();
@@ -103,30 +122,59 @@ export class SpaceEditor {
 
   async #save() {
     const title = this.#title.value.trim();
-    const glyph = this.#glyph;
+    const choice = { glyph: this.#glyph, symbol: this.#symbol };
     const editing = this.#editing;
     this.#dialog.close();
     if (editing) {
-      await this.#app.updateSpace(editing.id, title || editing.title, glyph);
+      await this.#app.updateSpace(editing.id, title || editing.title, choice);
     } else {
-      await this.#app.createSpace(title, glyph);
+      await this.#app.createSpace(title, choice);
     }
   }
 
-  #choose(glyph) {
+  #choose({ glyph = "", symbol = "" }) {
     this.#glyph = glyph;
+    this.#symbol = symbol;
     this.#showIcon();
-    this.#emojiButton.title = glyph ? `${glyph} – change` : NO_EMOJI_LABEL;
+    const label = glyph || symbol.replaceAll("-", " ");
+    this.#emojiButton.title = label ? `${label} – change` : NO_EMOJI_LABEL;
     this.#emojiButton.setAttribute("aria-label", this.#emojiButton.title);
     this.#togglePicker(false);
   }
 
   // The button shows what the space's button in the sidebar will show: the
-  // emoji, or the first letter of the name.
+  // emoji, the symbol, or the first letter of the name.
   #showIcon() {
-    this.#emojiButton.textContent =
-      this.#glyph || this.#title.value.trim().charAt(0).toUpperCase() || "?";
-    this.#emojiButton.classList.toggle("empty", !this.#glyph);
+    if (this.#symbol) {
+      this.#emojiButton.replaceChildren(symbolSVG(this.#doc, this.#symbol));
+    } else {
+      this.#emojiButton.textContent =
+        this.#glyph || this.#title.value.trim().charAt(0).toUpperCase() || "?";
+    }
+    this.#emojiButton.classList.toggle("empty", !this.#glyph && !this.#symbol);
+    this.#emojiButton.classList.toggle("has-symbol", !!this.#symbol);
+  }
+
+  // The picker offers emoji or the symbols, one at a time.
+  #setMode(mode, render = true) {
+    this.#mode = mode;
+    for (const button of this.#modes) {
+      const selected = button.dataset.mode == mode;
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-checked", String(selected));
+    }
+    const symbols = mode == "symbols";
+    this.#tones.hidden = symbols;
+    const label = symbols ? "Search icons" : "Search emoji";
+    this.#search.placeholder = label;
+    this.#search.setAttribute("aria-label", label);
+    this.#search.value = "";
+    if (render && !this.#picker.hidden) {
+      this.#loadEmoji().then(() => {
+        this.#renderTabs();
+        this.#renderGrid();
+      });
+    }
   }
 
   #togglePicker(show = this.#picker.hidden) {
@@ -134,7 +182,10 @@ export class SpaceEditor {
     this.#emojiButton.setAttribute("aria-expanded", String(show));
     if (show) {
       this.#search.focus();
-      this.#loadEmoji().then(() => this.#renderGrid());
+      this.#loadEmoji().then(() => {
+        this.#renderTabs();
+        this.#renderGrid();
+      });
     }
   }
 
@@ -146,7 +197,6 @@ export class SpaceEditor {
       .then(categories => {
         this.#categories = categories;
         this.#category = categories[0].name;
-        this.#renderTabs();
         this.#renderTones();
       });
     return this.#emojiLoaded;
@@ -209,16 +259,25 @@ export class SpaceEditor {
   }
 
   #renderTabs() {
+    const symbols = this.#mode == "symbols";
     this.#tabs.replaceChildren(
-      ...this.#categories.map(category => {
+      ...(symbols ? SYMBOL_CATEGORIES : this.#categories).map(category => {
         const tab = this.#doc.createElement("button");
         tab.type = "button";
         tab.className = "emoji-tab";
-        tab.textContent = category.icon;
+        if (symbols) {
+          tab.append(symbolSVG(this.#doc, category.icon));
+        } else {
+          tab.textContent = category.icon;
+        }
         tab.title = category.name;
         tab.dataset.category = category.name;
         tab.addEventListener("click", () => {
-          this.#category = category.name;
+          if (symbols) {
+            this.#symbolCategory = category.name;
+          } else {
+            this.#category = category.name;
+          }
           this.#search.value = "";
           this.#renderGrid();
         });
@@ -227,7 +286,43 @@ export class SpaceEditor {
     );
   }
 
+  #renderSymbolGrid() {
+    const query = this.#search.value.trim().toLowerCase();
+    for (const tab of this.#tabs.children) {
+      tab.classList.toggle(
+        "selected",
+        !query && tab.dataset.category == this.#symbolCategory
+      );
+    }
+    const entries = query
+      ? SYMBOL_CATEGORIES.flatMap(category => category.symbols).filter(
+          ([, keywords]) =>
+            query.split(/\s+/).every(word => keywords.includes(word))
+        )
+      : SYMBOL_CATEGORIES.find(
+          category => category.name == this.#symbolCategory
+        ).symbols;
+    this.#grid.replaceChildren(
+      ...entries.map(([name]) => {
+        const button = this.#doc.createElement("button");
+        button.type = "button";
+        button.className = "symbol-choice";
+        button.append(symbolSVG(this.#doc, name));
+        button.title = name.replaceAll("-", " ");
+        button.setAttribute("aria-label", button.title);
+        button.classList.toggle("selected", name == this.#symbol);
+        button.addEventListener("click", () => this.#choose({ symbol: name }));
+        return button;
+      })
+    );
+    this.#grid.classList.toggle("none", !entries.length);
+  }
+
   #renderGrid() {
+    if (this.#mode == "symbols") {
+      this.#renderSymbolGrid();
+      return;
+    }
     if (!this.#categories.length) {
       return;
     }
@@ -259,7 +354,7 @@ export class SpaceEditor {
         button.title = entry[1].split(" ").slice(0, 4).join(", ");
         button.setAttribute("aria-label", entry[1].split(" ")[0]);
         button.classList.toggle("selected", glyph == this.#glyph);
-        button.addEventListener("click", () => this.#choose(glyph));
+        button.addEventListener("click", () => this.#choose({ glyph }));
         return button;
       })
     );

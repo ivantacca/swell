@@ -94,6 +94,74 @@ add_task(async function test_the_dialog_creates_a_space_with_a_picked_emoji() {
   );
 });
 
+add_task(async function test_the_dialog_creates_a_space_with_a_symbol() {
+  const { app } = await swellApp();
+  app.spaceEditor.create();
+  document.getElementById("space-title").value = "Symbol space";
+  document.getElementById("space-title").dispatchEvent(new Event("input"));
+  document.getElementById("space-emoji-button").click();
+  document.querySelector('#picker-mode [data-mode="symbols"]').click();
+  await TestUtils.waitForCondition(
+    () => document.querySelectorAll("#emoji-grid .symbol-choice").length > 10,
+    "a category of symbols fills the grid"
+  );
+  Assert.ok(
+    document.getElementById("emoji-tones").hidden,
+    "skin tones are for emoji only"
+  );
+  for (const name of ["arrow-left", "nav-arrow-right", "check", "plus"]) {
+    Assert.ok(
+      ![...document.querySelectorAll("#emoji-grid .symbol-choice")].some(
+        button => button.title == name
+      ),
+      `${name}, an interface icon, is not offered`
+    );
+  }
+
+  const search = document.getElementById("emoji-search");
+  search.value = "rocket";
+  search.dispatchEvent(new Event("input"));
+  const found = [...document.querySelectorAll("#emoji-grid .symbol-choice")];
+  Assert.equal(found.length, 1, "a search finds the symbol across categories");
+  found[0].click();
+  Assert.ok(
+    document.getElementById("emoji-picker").hidden,
+    "choosing closes the picker"
+  );
+  Assert.ok(
+    document.querySelector("#space-emoji-button svg"),
+    "the button shows the symbol"
+  );
+
+  document.getElementById("space-save").click();
+  const space = await rendered(
+    async () => (await spaceNamed(app.core, "Symbol space")) ?? false,
+    "the space is made"
+  );
+  Assert.equal(space.icon.name, "rocket", "the symbol is the icon of the space");
+  await rendered(
+    () => spaceButton(space.id)?.querySelector("svg.symbol"),
+    "the sidebar draws the symbol"
+  );
+
+  // Editing it opens the picker on the symbols, and the first letter comes back.
+  app.spaceEditor.edit(space);
+  Assert.ok(
+    document.querySelector("#space-emoji-button svg"),
+    "the dialog shows the symbol"
+  );
+  document.getElementById("emoji-clear").click();
+  document.getElementById("space-save").click();
+  await rendered(
+    async () => (await spaceNamed(app.core, "Symbol space")).icon.name == "circle",
+    "the space is stored without an icon"
+  );
+  await rendered(
+    () => spaceButton(space.id)?.textContent == "S",
+    "the sidebar shows the first letter"
+  );
+});
+
 add_task(async function test_escape_closes_the_picker_before_the_dialog() {
   const { app } = await swellApp();
   app.spaceEditor.create();

@@ -820,6 +820,16 @@ kbd {
   font-size: 0;
 }
 
+.pinned-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pinned-header:hover .pinned-icon svg,
+.pinned-header.collapsed .pinned-icon svg {
+  display: none;
+}
+
 .pinned-header:hover .pinned-icon::before,
 .pinned-header.collapsed .pinned-icon::before {
   content: "";
@@ -1736,12 +1746,61 @@ dialog .buttons {
   font-size: 22px;
 }
 
-.emoji:hover,
-.emoji-tab:hover {
+.symbol-choice {
+  height: 36px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  display: grid;
+  place-items: center;
+}
+
+.symbol-choice svg {
+  width: 22px;
+  height: 22px;
+}
+
+.emoji-tab svg {
+  width: 18px;
+  height: 18px;
+}
+
+#picker-mode {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--space-small);
+  padding: 2px;
+  border-radius: 8px;
   background: var(--row-hover);
 }
 
-.emoji.selected {
+#picker-mode button {
+  flex: 1;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  padding: 3px 0;
+  color: inherit;
+}
+
+#picker-mode button.selected {
+  background: var(--row-selected);
+}
+
+#emoji-tones[hidden] {
+  display: none;
+}
+
+.emoji:hover,
+.emoji-tab:hover,
+.symbol-choice:hover {
+  background: var(--row-hover);
+}
+
+.emoji.selected,
+.symbol-choice.selected {
   background: var(--row-selected);
   outline: 2px solid var(--accent);
 }
@@ -2264,8 +2323,21 @@ textarea {
 }
 
 .space.has-emoji,
-.emoji-button:not(.empty) {
+.emoji-button:not(.empty):not(.has-symbol) {
   padding: 3px 0 0 1px;
+}
+
+/* A symbol is a drawing, centred by its box, not by the ink of a glyph. */
+.space.has-symbol,
+.emoji-button.has-symbol {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.space svg {
+  width: 18px;
+  height: 18px;
 }
 
 button,

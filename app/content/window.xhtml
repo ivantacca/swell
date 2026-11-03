@@ -366,6 +366,25 @@
           />
         </div>
         <div id="emoji-picker" hidden="">
+          <div id="picker-mode" role="radiogroup" aria-label="Kind of icon">
+            <button
+              type="button"
+              role="radio"
+              aria-checked="true"
+              class="selected"
+              data-mode="emoji"
+            >
+              Emoji
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked="false"
+              data-mode="symbols"
+            >
+              Icons
+            </button>
+          </div>
           <input
             id="emoji-search"
             type="search"

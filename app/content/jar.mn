@@ -26,6 +26,8 @@ swell.jar:
   content/swell/navbar.mjs    (navbar.mjs)
   content/swell/sidebar-layout.mjs (sidebar-layout.mjs)
   content/swell/space-editor.mjs (space-editor.mjs)
+  content/swell/symbols.mjs   (symbols.mjs)
+  content/swell/symbol-data.mjs (symbol-data.mjs)
   content/swell/emoji-data.json (emoji-data.json)
   content/swell/emoji-data-LICENSE (emoji-data-LICENSE)
   content/swell/icons/nav-arrow-left.svg (icons/nav-arrow-left.svg)

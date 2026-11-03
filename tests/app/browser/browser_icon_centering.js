@@ -79,7 +79,7 @@ add_task(async function test_space_glyphs_are_centred_in_their_squares() {
     spaces.push({ id, glyph });
   }
   spaces.push({
-    id: await app.core.createSpace("Plain", new Icon.Symbol({ name: "star" })),
+    id: await app.core.createSpace("Plain", new Icon.Symbol({ name: "circle" })),
     glyph: "P",
   });
   for (const { id, glyph } of spaces) {
@@ -91,4 +91,32 @@ add_task(async function test_space_glyphs_are_centred_in_their_squares() {
     Assert.lessOrEqual(Math.abs(dx), 1, `${glyph} is centred across (${dx})`);
     Assert.lessOrEqual(Math.abs(dy), 0.75, `${glyph} is centred down (${dy})`);
   }
+});
+
+add_task(async function test_space_symbols_are_centred_in_their_squares() {
+  const { app } = await swellApp();
+  const id = await app.core.createSpace(
+    "Symbol",
+    new Icon.Symbol({ name: "yoga" })
+  );
+  const button = await rendered(
+    () => document.querySelector(`#spaces .space[data-id="${id}"]`),
+    "the button of the symbol shows"
+  );
+  const svg = await rendered(
+    () => button.querySelector("svg.symbol"),
+    "the symbol is drawn"
+  );
+  const outer = button.getBoundingClientRect();
+  const inner = svg.getBoundingClientRect();
+  Assert.lessOrEqual(
+    Math.abs(inner.left + inner.width / 2 - (outer.left + outer.width / 2)),
+    0.5,
+    "the symbol is centred across"
+  );
+  Assert.lessOrEqual(
+    Math.abs(inner.top + inner.height / 2 - (outer.top + outer.height / 2)),
+    0.5,
+    "the symbol is centred down"
+  );
 });

@@ -41,7 +41,7 @@ async function openInSpace(bridge, space, url) {
 }
 
 async function newSpace(core, title) {
-  const id = await core.createSpace(title, new Icon.Symbol({ name: "star" }));
+  const id = await core.createSpace(title, new Icon.Symbol({ name: "circle" }));
   return (await core.listSpaces()).find(space => space.id == id);
 }
 
