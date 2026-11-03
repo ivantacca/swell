@@ -70,6 +70,8 @@ prefs = [
 
 ["browser_logins.js"]
 
+["browser_move_to_space.js"]
+
 ["browser_navbar.js"]
 
 ["browser_no_mozilla_services.js"]

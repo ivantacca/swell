@@ -466,6 +466,91 @@ export class App {
     }
   }
 
+  // What a drag needs to carry nodes to another space, taken when the drag
+  // starts, because showing the space it hovers replaces the tree state: the
+  // space, and for each node (nothing below a node that is dragged too) the
+  // list it is in, whether it is a folder, its address and the nodes under it.
+  dragSnapshot(ids) {
+    const space = this.space;
+    const zones = new Map([
+      [space.todayRoot, "today"],
+      [space.pinnedRoot, "pinned"],
+      [space.favoritesRoot, "favorites"],
+    ]);
+    const below = id => [id, ...this.state.childrenOf(id).flatMap(below)];
+    const nodes = ids
+      .filter(
+        id => !ids.some(other => other != id && this.state.isWithin(id, other))
+      )
+      .map(id => {
+        let root = this.state.parent(id);
+        while (root && !zones.has(root)) {
+          root = this.state.parent(root);
+        }
+        return {
+          id,
+          zone: zones.get(root) ?? "today",
+          folder: this.state.isFolder(id),
+          url: this.state.describe(id)?.url,
+          subtree: below(id),
+        };
+      });
+    return { space: space.id, nodes };
+  }
+
+  // Moves what a drag carries (see dragSnapshot) into another space, at the end
+  // of the list it came from, or of `zone` if one is given. A space is its own
+  // container, so a page that is open cannot just change spaces: an open tab in
+  // Today is opened again in the new space and the old one closed, a saved tab
+  // that is open is closed first, and the rest moves as it is.
+  async moveToSpace({ nodes }, spaceId, zone = null) {
+    const target = this.spaces.find(s => s.id == spaceId);
+    if (!target) {
+      return;
+    }
+    const roots = {
+      today: target.todayRoot,
+      pinned: target.pinnedRoot,
+      favorites: target.favoritesRoot,
+    };
+    for (const node of nodes) {
+      const dest = node.folder ? "pinned" : (zone ?? node.zone);
+      const root = roots[dest];
+      const count = async () => {
+        const tree = await this.core.spaceTree(spaceId);
+        return tree.children.find(c => c.parent == root)?.ids.length ?? 0;
+      };
+      const openTabs = node.subtree
+        .map(id => this.openTabs.get(id))
+        .filter(Boolean);
+      if (node.zone == "today" && openTabs.length) {
+        const live = await this.run(() =>
+          this.bridge.openUrl(openTabs[0].url, spaceId, { background: true })
+        );
+        if (live && dest != "today") {
+          await this.run(async () =>
+            this.core.pinTab(this.bridge.windowId, live, root, await count())
+          );
+        }
+        await this.run(() => this.core.removeNode(node.id));
+        continue;
+      }
+      for (const tab of openTabs) {
+        await this.run(() => this.bridge.closeTab(tab.liveTab));
+      }
+      await this.run(async () =>
+        this.core.moveNode(node.id, root, await count())
+      );
+    }
+    // The diffs of a node that came from another space name a node this
+    // window never loaded, so the tree is read again.
+    await this.#loadTree();
+    this.scheduleRender();
+    this.toasts.show({
+      text: `Moved to ${target.title}`,
+    });
+  }
+
   // Puts nodes, in the order given, in a new folder where the first one is. Today
   // and the favorites hold tabs only, so from there the folder goes to the end of
   // Pinned.

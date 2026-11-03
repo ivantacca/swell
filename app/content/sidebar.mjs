@@ -59,6 +59,8 @@ const WHEEL_THRESHOLD = 60;
 const WHEEL_IDLE_MS = 250;
 // Inside a gesture's tail, this much faster than its slowest point is a new swipe.
 const WHEEL_RESTART_GAIN = 15;
+// Held over another space's button, dragged pages make that space the one in front.
+const DRAG_SWITCH_MS = 600;
 
 /**
  *
@@ -67,6 +69,8 @@ export class Sidebar {
   #app;
   #doc;
   #dragged = [];
+  #dragSnapshot = null;
+  #dragSwitch = null;
   #draggedSpace = null;
   #selection = new Set();
   #anchor = null;
@@ -471,8 +475,11 @@ export class Sidebar {
   // Spaces are dragged by their buttons; dropping on the left half of another
   // one puts the space before it, on the right half after it.
   #installSpaceDrag(button, id) {
-    const clear = () => button.classList.remove("drop-before", "drop-after");
+    const clear = () =>
+      button.classList.remove("drop-before", "drop-after", "drop-into");
     button.addEventListener("dragstart", event => {
+      this.#dragged = [];
+      this.#dragSnapshot = null;
       this.#draggedSpace = id;
       event.dataTransfer.setData(SPACE_MIME, id);
       event.dataTransfer.effectAllowed = "move";
@@ -485,7 +492,26 @@ export class Sidebar {
         other.classList.remove("drop-before", "drop-after");
       }
     });
+    // Pages dragged onto a space's button go there; held over it, they show it.
+    const forPages = () => !this.#draggedSpace && this.#dragSnapshot;
+    button.addEventListener("dragenter", () => {
+      if (forPages() && id != this.#app.activeSpaceId) {
+        clearTimeout(this.#dragSwitch);
+        this.#dragSwitch = setTimeout(
+          () => this.#app.switchSpace(id),
+          DRAG_SWITCH_MS
+        );
+      }
+    });
     button.addEventListener("dragover", event => {
+      if (forPages()) {
+        if (id != this.#app.activeSpaceId) {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+          button.classList.add("drop-into");
+        }
+        return;
+      }
       if (!this.#draggedSpace || this.#draggedSpace == id) {
         return;
       }
@@ -496,8 +522,21 @@ export class Sidebar {
       button.classList.toggle("drop-before", before);
       button.classList.toggle("drop-after", !before);
     });
-    button.addEventListener("dragleave", clear);
+    button.addEventListener("dragleave", () => {
+      clear();
+      clearTimeout(this.#dragSwitch);
+    });
     button.addEventListener("drop", event => {
+      if (forPages()) {
+        event.preventDefault();
+        const snapshot = this.#dragSnapshot;
+        this.#endNodeDrag();
+        clear();
+        if (id != this.#app.activeSpaceId) {
+          this.#app.moveToSpace(snapshot, id);
+        }
+        return;
+      }
       const dragged = this.#draggedSpace;
       if (!dragged || dragged == id) {
         return;
@@ -617,6 +656,7 @@ export class Sidebar {
         this.#setSelection([]);
       }
       this.#dragged = this.#selection.has(id) ? this.#selectedNodes() : [id];
+      this.#dragSnapshot = this.#app.dragSnapshot(this.#dragged);
       this.#favoritesPreview = null;
       this.#favoritesDropped = false;
       event.dataTransfer.setData(DRAG_TYPE, id);
@@ -629,25 +669,41 @@ export class Sidebar {
       this.#doc.getElementById("sidebar").classList.add("tab-dragging");
     });
     element.addEventListener("dragend", () => {
-      this.#dragged = [];
-      for (const dragging of this.#doc.querySelectorAll(
-        ".row.dragging, .favorite.dragging"
-      )) {
-        dragging.classList.remove("dragging");
-      }
-      this.#doc.getElementById("sidebar").classList.remove("tab-dragging");
-      this.#clearDropMarks();
+      this.#endNodeDrag();
       if (!this.#favoritesDropped) {
         this.#restoreFavorites();
       }
     });
   }
 
+  // The drag is over, dropped or not. If showing another space replaced the
+  // dragged row, the browser never says so, and the drop does.
+  #endNodeDrag() {
+    clearTimeout(this.#dragSwitch);
+    this.#dragged = [];
+    this.#dragSnapshot = null;
+    for (const dragging of this.#doc.querySelectorAll(
+      ".row.dragging, .favorite.dragging"
+    )) {
+      dragging.classList.remove("dragging");
+    }
+    this.#doc.getElementById("sidebar").classList.remove("tab-dragging");
+    this.#clearDropMarks();
+  }
+
+  // Whether the nodes being dragged belong to another space than the one shown.
+  get #dragIsForeign() {
+    return (
+      !!this.#dragSnapshot &&
+      this.#dragSnapshot.space != this.#app.activeSpaceId
+    );
+  }
+
   #installDropZone(container) {
     container.addEventListener("dragover", event => {
       const drop = this.#dropFor(container, event);
       this.#clearDropMarks();
-      if (container.id == "favorites") {
+      if (container.id == "favorites" && !drop?.foreign) {
         if (drop) {
           this.#arrangeFavorites(drop.choice);
         } else {
@@ -672,7 +728,12 @@ export class Sidebar {
     container.addEventListener("drop", event => {
       const drop = this.#dropFor(container, event);
       this.#clearDropMarks();
-      if (drop) {
+      if (drop?.foreign) {
+        event.preventDefault();
+        const snapshot = this.#dragSnapshot;
+        this.#endNodeDrag();
+        this.#app.moveToSpace(snapshot, this.#app.activeSpaceId, container.id);
+      } else if (drop) {
         event.preventDefault();
         this.#favoritesDropped ||= container.id == "favorites";
         this.#app.moveNodes(drop.plan);
@@ -686,6 +747,9 @@ export class Sidebar {
     const dragged = this.#dragged;
     if (!dragged.length) {
       return null;
+    }
+    if (this.#dragIsForeign) {
+      return { foreign: true, where: "inside", element: container };
     }
     const state = this.#app.state;
     if (container.id == "favorites") {

@@ -1986,6 +1986,10 @@ dialog .buttons {
   box-shadow: 2px 0 0 var(--accent);
 }
 
+.space.drop-into {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
 #navbar {
   padding-bottom: var(--space-small);
 }
