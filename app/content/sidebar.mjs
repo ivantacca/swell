@@ -53,6 +53,13 @@ export function isAway(pinned, current) {
 
 const SPACE_MIME = "application/x-swell-space";
 
+// Sideways scrolling of this many pixels changes space; a gesture ends when
+// no wheel event has come for this long.
+const WHEEL_THRESHOLD = 60;
+const WHEEL_IDLE_MS = 250;
+// Inside a gesture's tail, this much faster than its slowest point is a new swipe.
+const WHEEL_RESTART_GAIN = 15;
+
 /**
  *
  */
@@ -66,6 +73,11 @@ export class Sidebar {
   #selectionSpace = null;
   #favoritesPreview = null;
   #favoritesDropped = false;
+  #wheelDelta = 0;
+  #wheelSpent = false;
+  #wheelIdle = null;
+  #wheelLast = 0;
+  #wheelFloor = Infinity;
 
   constructor(app) {
     this.#app = app;
@@ -80,6 +92,11 @@ export class Sidebar {
     doc
       .getElementById("space-add")
       .addEventListener("click", () => app.spaceEditor.create());
+    doc
+      .getElementById("sidebar")
+      .addEventListener("wheel", event => this.#onWheel(event), {
+        passive: false,
+      });
     doc.getElementById("pinned-header").addEventListener("click", () => {
       const space = app.space;
       if (space) {
@@ -373,6 +390,49 @@ export class Sidebar {
         return button;
       })
     );
+  }
+
+  // Sideways scrolling over the sidebar (a touchpad swipe, a horizontal wheel)
+  // goes one space per gesture. A swipe sends many events, and its inertia
+  // tail keeps coming for a second or more after the fingers are up, so deltas
+  // add up to a threshold and the rest of the gesture is ignored. A gesture
+  // ends when events stop for a while, or, since the next swipe can begin
+  // inside the tail, when the scroll turns around or speeds up again.
+  #onWheel(event) {
+    const dx = event.deltaX;
+    if (Math.abs(dx) <= Math.abs(event.deltaY)) {
+      return;
+    }
+    event.preventDefault();
+    clearTimeout(this.#wheelIdle);
+    this.#wheelIdle = setTimeout(() => this.#endWheelGesture(), WHEEL_IDLE_MS);
+    if (this.#wheelSpent) {
+      const speed = Math.abs(dx);
+      this.#wheelFloor = Math.min(this.#wheelFloor, speed);
+      if (
+        Math.sign(dx) != Math.sign(this.#wheelLast) ||
+        (speed >= this.#wheelFloor + WHEEL_RESTART_GAIN &&
+          speed > this.#wheelFloor * 2)
+      ) {
+        this.#endWheelGesture();
+      }
+    }
+    this.#wheelLast = dx;
+    if (this.#wheelSpent) {
+      return;
+    }
+    this.#wheelDelta += dx;
+    if (Math.abs(this.#wheelDelta) >= WHEEL_THRESHOLD) {
+      this.#wheelSpent = true;
+      this.#wheelFloor = Math.abs(dx);
+      this.#app.switchSpaceBy(Math.sign(this.#wheelDelta));
+    }
+  }
+
+  #endWheelGesture() {
+    this.#wheelSpent = false;
+    this.#wheelDelta = 0;
+    this.#wheelFloor = Infinity;
   }
 
   #renderSpaces() {
