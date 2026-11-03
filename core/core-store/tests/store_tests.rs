@@ -36,10 +36,10 @@ fn same(a: &Model, b: &Model) {
 fn fresh_database_is_migrated_and_reopening_is_idempotent() {
     let dir = tempfile::tempdir().unwrap();
     let store = Store::open(dir.path()).unwrap();
-    assert_eq!(store.schema_version().unwrap(), 3);
+    assert_eq!(store.schema_version().unwrap(), 4);
     drop(store);
     let store = Store::open(dir.path()).unwrap();
-    assert_eq!(store.schema_version().unwrap(), 3);
+    assert_eq!(store.schema_version().unwrap(), 4);
     let empty = reload(&store);
     assert!(empty.spaces().is_empty());
 }

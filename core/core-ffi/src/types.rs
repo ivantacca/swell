@@ -99,6 +99,8 @@ pub struct SpaceView {
     pub icon: Icon,
     /// `#rrggbb`, or none.
     pub tint: Option<String>,
+    /// The pinned list is folded away.
+    pub pinned_collapsed: bool,
     pub identity_id: String,
     /// The Gecko container of this space; never 0.
     pub user_context_id: u32,

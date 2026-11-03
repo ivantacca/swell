@@ -447,6 +447,20 @@ fn a_space_has_an_optional_tint() {
 }
 
 #[test]
+fn a_space_can_fold_its_pinned_list_away() {
+    let mut m = model();
+    let a = space(&mut m, "A");
+    let b = space(&mut m, "B");
+    assert!(!m.space(&a).unwrap().pinned_collapsed);
+    m.set_pinned_collapsed(&a, true).unwrap();
+    assert!(m.space(&a).unwrap().pinned_collapsed);
+    assert!(!m.space(&b).unwrap().pinned_collapsed, "per space");
+    m.set_pinned_collapsed(&a, false).unwrap();
+    assert!(!m.space(&a).unwrap().pinned_collapsed);
+    assert!(m.set_pinned_collapsed(&SpaceId::from("nope"), true).is_err());
+}
+
+#[test]
 fn a_pinned_tab_keeps_its_page_when_it_navigates_and_a_today_tab_does_not() {
     let mut m = model();
     let s = space(&mut m, "S");

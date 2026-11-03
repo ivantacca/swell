@@ -768,6 +768,19 @@ fn spaces_are_edited_reordered_and_deleted_and_it_all_persists() {
 }
 
 #[test]
+fn a_folded_pinned_list_persists() {
+    let f = fixture();
+    let a = first_space(&f.core);
+    assert!(!a.pinned_collapsed);
+    f.core.set_pinned_collapsed(a.id.clone(), true).unwrap();
+    let f = reopen(f);
+    assert!(first_space(&f.core).pinned_collapsed);
+    f.core.set_pinned_collapsed(a.id, false).unwrap();
+    let f = reopen(f);
+    assert!(!first_space(&f.core).pinned_collapsed);
+}
+
+#[test]
 fn a_space_tint_persists() {
     let f = fixture();
     let a = first_space(&f.core);

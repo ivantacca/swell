@@ -257,6 +257,7 @@ impl Model {
             title: title.to_owned(),
             icon,
             tint: None,
+            pinned_collapsed: false,
             identity_id,
             pinned_root: pinned.id.clone(),
             today_root: today.id.clone(),
@@ -294,6 +295,15 @@ impl Model {
             return not_found("space", id.as_str());
         };
         space.tint = tint.map(str::to_lowercase);
+        Ok(())
+    }
+
+    /// Folds the pinned list of a space away, or unfolds it.
+    pub fn set_pinned_collapsed(&mut self, id: &SpaceId, collapsed: bool) -> Result<()> {
+        let Some(space) = self.spaces.get_mut(id) else {
+            return not_found("space", id.as_str());
+        };
+        space.pinned_collapsed = collapsed;
         Ok(())
     }
 

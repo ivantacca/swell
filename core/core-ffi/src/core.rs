@@ -97,6 +97,7 @@ impl Inner {
                     title: space.title.clone(),
                     icon: (&space.icon).into(),
                     tint: space.tint.clone(),
+                    pinned_collapsed: space.pinned_collapsed,
                     identity_id: identity.id.0.clone(),
                     user_context_id: identity.gecko_user_context_id,
                     pinned_root: space.pinned_root.0.clone(),
@@ -423,6 +424,17 @@ impl SwellCore {
             inner
                 .model
                 .set_space_tint(&SpaceId::from(space.as_str()), tint.as_deref())?;
+            events.push(Event::Spaces(inner.space_views()));
+            inner.persist_structure()
+        })
+    }
+
+    /// Folds the pinned list of the space away, or unfolds it.
+    pub fn set_pinned_collapsed(&self, space: String, collapsed: bool) -> Result<(), CoreError> {
+        self.run(|inner, events| {
+            inner
+                .model
+                .set_pinned_collapsed(&SpaceId::from(space.as_str()), collapsed)?;
             events.push(Event::Spaces(inner.space_views()));
             inner.persist_structure()
         })

@@ -53,6 +53,7 @@ const MIGRATIONS: &[&str] = &[
     );
 ",
     "ALTER TABLE spaces ADD COLUMN tint TEXT;",
+    "ALTER TABLE spaces ADD COLUMN pinned_collapsed INTEGER NOT NULL DEFAULT 0;",
 ];
 
 pub struct Store {
@@ -149,7 +150,7 @@ impl Store {
 
         let mut spaces = Vec::new();
         let mut stmt = self.conn.prepare(
-            "SELECT id, title, icon, identity_id, pinned_root, today_root, tint FROM spaces ORDER BY position",
+            "SELECT id, title, icon, identity_id, pinned_root, today_root, tint, pinned_collapsed FROM spaces ORDER BY position",
         )?;
         let mut rows = stmt.query([])?;
         while let Some(row) = rows.next()? {
@@ -159,6 +160,7 @@ impl Store {
                 title: row.get(1)?,
                 icon,
                 tint: row.get(6)?,
+                pinned_collapsed: row.get(7)?,
                 identity_id: row.get::<_, String>(3)?.into(),
                 pinned_root: row.get::<_, String>(4)?.into(),
                 today_root: row.get::<_, String>(5)?.into(),
@@ -356,12 +358,12 @@ fn write_structure(tx: &Transaction, model: &Model) -> Result<()> {
     }
     for (position, space) in model.spaces().iter().enumerate() {
         tx.execute(
-            "INSERT INTO spaces (id, title, icon, identity_id, pinned_root, today_root, position, tint)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+            "INSERT INTO spaces (id, title, icon, identity_id, pinned_root, today_root, position, tint, pinned_collapsed)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
              ON CONFLICT(id) DO UPDATE SET title = excluded.title, icon = excluded.icon,
                identity_id = excluded.identity_id, pinned_root = excluded.pinned_root,
                today_root = excluded.today_root, position = excluded.position,
-               tint = excluded.tint",
+               tint = excluded.tint, pinned_collapsed = excluded.pinned_collapsed",
             params![
                 space.id.as_str(),
                 space.title,
@@ -370,7 +372,8 @@ fn write_structure(tx: &Transaction, model: &Model) -> Result<()> {
                 space.pinned_root.as_str(),
                 space.today_root.as_str(),
                 position as i64,
-                space.tint
+                space.tint,
+                space.pinned_collapsed
             ],
         )?;
     }
